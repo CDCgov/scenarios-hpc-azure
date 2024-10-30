@@ -72,5 +72,3 @@ fi
 if  [ "$ERRORS_AROSE" = "false" ]; then
     printf "${GREEN}Setup finished without errors!${NC} \n"
 fi
-
-
