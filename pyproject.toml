@@ -22,3 +22,7 @@ pytest = "^8.3.3"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+create_experiment = "scenarios_hpc_azure.create_experiment:create"
+launch_experiment = "scenarios_hpc_azure.launch_experiment:launch"
