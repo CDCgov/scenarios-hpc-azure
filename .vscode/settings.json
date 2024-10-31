@@ -1,8 +1,6 @@
 {
-    "cSpell.words": [
-        "ATSDR",
-        "CFPB",
-        "ISSO",
-        "cybersecurity"
-    ]
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.formatting.provider": "none"
 }
