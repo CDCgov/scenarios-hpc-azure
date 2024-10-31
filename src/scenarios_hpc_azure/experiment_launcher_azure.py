@@ -7,7 +7,7 @@ import argparse
 import os
 from itertools import groupby
 
-from .azure_utilities import AzureExperimentLauncher
+from .azure_utils import AzureExperimentLauncher
 
 # specify job ID, cant already exist
 

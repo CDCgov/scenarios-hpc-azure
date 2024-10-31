@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 from scipy.stats import pearsonr
 from tqdm import tqdm
 
-from ..azure_utilities import download_directory_from_azure
+from ..azure_utils import download_directory_from_azure
 
 
 class Node:
