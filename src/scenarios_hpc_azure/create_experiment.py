@@ -3,18 +3,14 @@ import os
 
 import pandas as pd
 
-from . import utils
-
-# GLOBALS, DONT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING
-# tells the script where to look for certain files in an experiment
-RUNNER_SCRIPT_PATH = "run_task.py"
-TEMPLATE_CONFIGS_DIR_NAME = "template_configs"
-STATE_CONFIGS_DIR_NAME = "states"
-PP_SCRIPTS_DIR_NAME = "postprocessing_scripts"
-EXP_DIR_NAME_OPTIONAL = "exp"
-file_path, _ = os.path.split(os.path.realpath(__file__))
-fips_to_name_path = os.path.join(file_path, "data", "fips_to_name.csv")
-populations_path = os.path.join(file_path, "data", "CenPop2020_Mean_ST.csv")
+from . import (
+    FIPS_TO_NAME_PATH,
+    POPULATIONS_PATH,
+    PP_SCRIPTS_DIR_NAME,
+    STATE_CONFIGS_DIR_NAME,
+    TEMPLATE_CONFIGS_DIR_NAME,
+    utils,
+)
 
 parser = argparse.ArgumentParser()
 # experiment directory
@@ -80,8 +76,8 @@ def create():
         experiment_dir, TEMPLATE_CONFIGS_DIR_NAME, tcs=tcs
     )
     # load our mapping CSVs
-    state_names_map = pd.read_csv(fips_to_name_path)
-    state_pops_map = pd.read_csv(populations_path)
+    state_names_map = pd.read_csv(FIPS_TO_NAME_PATH)
+    state_pops_map = pd.read_csv(POPULATIONS_PATH)
     # adding a USA row with the sum of all state pops
     usa_pop_row = pd.DataFrame(
         [
