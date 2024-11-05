@@ -207,19 +207,19 @@ def create_state_subdirectories(dir: str, state_names: list[str]):
     # Create the main directory if it does not exist
     if not os.path.exists(dir):
         os.makedirs(dir)
-
+    print(
+        f"{bcolors.WARNING}removing and repopulating regions within {dir}{bcolors.ENDC}"
+    )
     # Create subdirectories for each state inside the "states" folder
     for state in state_names:
         state_dir = os.path.join(dir, state)
-        if not os.path.exists(state_dir):
-            os.makedirs(state_dir)
+        if os.path.exists(state_dir):
+            os.rmdir(state_dir)
+        os.makedirs(state_dir)
 
 
 def populate_config_files(
-    dir: str,
-    configs: list[str],
-    state_names_map: pd.DataFrame,
-    state_pops_map: pd.DataFrame,
+    dir: str, configs: list[str], region_info: pd.DataFrame
 ):
     """
     scans an experiment directory `dir` opening each folder, and copying over read-only versions
@@ -240,12 +240,9 @@ def populate_config_files(
         list of paths to each config template, these config templates will be copied into each subdirectory as read-only
         they will have their "REGIONS" key changed to resemble the state the subdirectory is modeling.
 
-    state_names_map: pd.DataFrame
-        dataframe containing "stusps" and "stname"
-        columns to map states to their usps codes
-
-    state_pops_map: pd.DataFrame
-        dataframe containing mapping from `STNAME` to `POPULATION`
+    `region_info`: pd.DataFrame
+        dataframe containing "stusps", "stname", and population
+        columns to map regions to their usps codes and populations
 
     Returns
     ------------
@@ -255,8 +252,8 @@ def populate_config_files(
     for subdir in os.listdir(dir):
         subdir_path = os.path.join(dir, subdir)
         if os.path.isdir(subdir_path):
-            state_name = code_to_state(subdir, state_names_map)
-            state_pop = code_to_pop(state_name, state_pops_map)
+            state_name = code_to_state(subdir, region_info)
+            state_pop = code_to_pop(state_name, region_info)
 
             for config_file_path in configs:
                 # Read the original JSON file
@@ -346,9 +343,9 @@ def code_to_pop(state_name: str, state_pops_map: pd.DataFrame):
     ----------
     str/KeyError: state population, or KeyError if invalid state name
     """
-    state_pop = state_pops_map[state_pops_map["STNAME"] == state_name]
+    state_pop = state_pops_map[state_pops_map["stname"] == state_name]
     if len(state_pop) == 1:
-        return state_pop["POPULATION"].iloc[0]
+        return state_pop["population"].iloc[0]
     else:
         raise KeyError(
             "unable to find population for state name %s" % state_name
