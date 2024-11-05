@@ -2,7 +2,7 @@ import argparse
 import os
 from itertools import groupby
 
-from . import EXP_DIR_NAME_OPTIONAL, SECRETS_DIR_NAME, SECRETS_FILE_NAME, utils
+from . import EXP_DIR_NAME, SECRETS_DIR_NAME, SECRETS_FILE_NAME, utils
 from .azure_utils import AzureExperimentLauncher
 
 parser = argparse.ArgumentParser(description="Experiment Azure Launcher")
@@ -18,7 +18,7 @@ parser.add_argument(
     "--experiment_name",
     type=str,
     help="the experiment name, must match the experiment directory within %s"
-    % EXP_DIR_NAME_OPTIONAL,
+    % EXP_DIR_NAME,
     required=True,
 )
 parser.add_argument(
@@ -63,7 +63,7 @@ def launch():
         experiment_name,
         job_id,
         azure_config_toml=azure_config_toml_path,
-        experiment_directory=EXP_DIR_NAME_OPTIONAL,
+        experiment_directory=EXP_DIR_NAME,
         docker_image_name=docker_image_tag,
     )
     pp_scripts_path = os.path.join(

@@ -15,9 +15,8 @@ TEMPLATE_CONFIGS_DIR_NAME = "template_configs"
 STATE_CONFIGS_DIR_NAME = "states"
 # where experiment stores postprocessing scripts
 PP_SCRIPTS_DIR_NAME = "postprocessing_scripts"
-# optional directory where experiments are stored, if multiple experiments
-# are found in the same repo, they are found in this folder
-EXP_DIR_NAME_OPTIONAL = "exp"
+# where experiments are stored. subfolders of this dir are experiment_names
+EXP_DIR_NAME = "exp"
 # path from user's CWD to where their azure configuration toml is stored
 SECRETS_DIR_NAME = "secrets"
 SECRETS_FILE_NAME = "configuration_cfaazurebatchprd.toml"
@@ -37,7 +36,7 @@ __all__ = [
     TEMPLATE_CONFIGS_DIR_NAME,
     STATE_CONFIGS_DIR_NAME,
     PP_SCRIPTS_DIR_NAME,
-    EXP_DIR_NAME_OPTIONAL,
+    EXP_DIR_NAME,
     FIPS_TO_NAME_PATH,
     POPULATIONS_PATH,
     PACKAGE_PATH,
