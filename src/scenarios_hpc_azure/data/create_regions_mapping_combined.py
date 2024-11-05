@@ -52,11 +52,8 @@ add_hhs_regions["hhsregion"] = add_hhs_regions["hhsregion"].astype(int)
 add_hhs_regions["STNAME"] = [
     "hhs" + str(i) for i in add_hhs_regions["hhsregion"]
 ]
-# add commas between each abbreviation
-add_hhs_regions["stusps"] = [
-    ",".join(s[i : i + 2] for i in range(0, len(s), 2))
-    for s in add_hhs_regions["stusps"]
-]
+# we dont have usps postal codes for hhs regions, so just use hhs1-hhs10
+add_hhs_regions["stusps"] = add_hhs_regions["STNAME"]
 add_hhs_regions["stid"] = "hhsregion"
 
 # append those hhsregions to the combined df and rename the columns then done
@@ -84,5 +81,7 @@ final = final[
         "longitude",
     ]
 ]
-final.to_csv("src/scenarios_hpc_azure/data/regions_mapping_combined.csv")
+final.to_csv(
+    "src/scenarios_hpc_azure/data/regions_mapping_combined.csv", index=False
+)
 print(final.head())

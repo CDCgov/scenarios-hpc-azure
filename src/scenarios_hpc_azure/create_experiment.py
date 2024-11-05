@@ -103,7 +103,7 @@ def create():
         states = list(
             region_info.loc[region_info["stid"] == "state", "stusps"]
         )
-    elif "hhsregions":
+    elif "hhsregions" in states:
         # stusps is a list of state abr for an hhsregion, so use stname
         # to get the hhs1-hhs10 names
         states = list(
