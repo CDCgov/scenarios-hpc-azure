@@ -12,8 +12,8 @@ from plotly.graph_objects import Figure
 from shiny import App, Session, reactive, render, ui
 from shinywidgets import output_widget, render_plotly, render_widget
 
-from .. import azure_utils as autils
-from . import shiny_utils as sutils
+from scenarios_hpc_azure import azure_utils as autils
+from scenarios_hpc_azure.shiny_visualizers import shiny_utils as sutils
 
 INPUT_BLOB_NAME = "scenarios-mechanistic-input"
 OUTPUT_BLOB_NAME = "scenarios-mechanistic-output"
@@ -22,9 +22,7 @@ SHINY_CACHE_PATH = "shiny_visualizers/shiny_cache"
 # this will reduce the time it takes to load the azure connection, but only shows
 # one experiment worth of data, which may be what you want...
 #  leave empty ("") to explore all experiments
-PRE_FILTER_EXPERIMENTS = (
-    "example_azure_experiment"  # fifty_state_season2_5strain_2202_2404
-)
+PRE_FILTER_EXPERIMENTS = ""  # fifty_state_season2_5strain_2202_2404
 # when loading the overview timelines csv for each run, columns
 # are expected to have names corresponding to the type of plot they create
 # vaccination_0_17 specifies the vaccination_ plot type, multiple columns may share
@@ -62,9 +60,9 @@ OVERVIEW_PLOT_Y_AXIS_NORMALIZATION = np.array(
 OVERVIEW_DAY_FIDELITY = 3
 OVERVIEW_SUBPLOT_HEIGHT = 150
 OVERVIEW_SUBPLOT_WIDTH = 550
-DEMOGRAPHIC_DATA_PATH = "data/demographic-data/"
+DEMOGRAPHIC_DATA_PATH = "src/scenarios_hpc_azure/data/"
 STATE_NAME_LOOKUP = pd.read_csv(
-    os.path.join(DEMOGRAPHIC_DATA_PATH, "locations.csv")
+    os.path.join(DEMOGRAPHIC_DATA_PATH, "fips_to_name.csv")
 )
 POP_COUNTS_LOOKUP = pd.read_csv(
     os.path.join(DEMOGRAPHIC_DATA_PATH, "CenPop2020_Mean_ST.csv")
@@ -169,6 +167,12 @@ app_ui = ui.page_fluid(
             ui.nav_panel(
                 "Sample Violin Plots",
                 output_widget("plot_sample_violins"),
+            ),
+            ui.nav_panel(
+                "Config Visualizer",
+                ui.output_plot(
+                    "plot_prior_distributions", width=1600, height=1600
+                ),
             ),
         ),
     ),
@@ -367,6 +371,25 @@ def server(input, output, session: Session):
         # theme = sutils.shiny_to_plotly_theme(input.dark_mode())
         # fig.update_layout(template=theme)
         print("displaying correlations plot")
+        return fig
+
+    @output(id="plot_prior_distributions")
+    @render.plot
+    @reactive.event(input.action_button)
+    def plot_prior_distributions():
+        exp = input.experiment()
+        job_id = input.job_id()
+        states = input.states()
+        scenario = input.scenario()
+        theme = input.dark_mode()
+        theme = sutils.shiny_to_matplotlib_theme(theme)
+        cache_paths = sutils.get_azure_files(
+            exp, job_id, states, scenario, azure_client, SHINY_CACHE_PATH
+        )
+        # we have the figure, now update the light/dark mode depending on the switch
+        fig = sutils.load_prior_distributions_plot(cache_paths[0], theme)
+        # we have the figure, now update the light/dark mode depending on the switch
+        print("displaying prior distributions")
         return fig
 
     @output(id="plot_sample_violins")
