@@ -47,8 +47,10 @@ parser.add_argument(
     required=True,
     nargs="+",
     help="space separated list of str representing "
-    "USPS postal code of each state. Can also be `all` or `50state` for "
-    "all available regions or just 50 states respectively.",
+    "USPS postal code of each state. Can additionally pass the following "
+    "shortcuts... `all`: run all states/regions/territories. "
+    "`50states`: run states only."
+    "`hhsregions`: create a single directory for each hhs region.",
 )
 parser.add_argument(
     "-tc",
