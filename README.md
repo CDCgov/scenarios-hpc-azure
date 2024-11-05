@@ -23,7 +23,7 @@ After installing scenarios-hpc-azure into your `poetry` environment you should
 have access to the scripts listed in `pyproject.toml` `[tool.poetry.scripts]` section.
 
 These scripts will aid you in creating and launching your experiment and
-are used as command line tools, try the `-h` flag to get a brief description
+are used as command line tools. Use the `-h` flag to get a brief description
 on the expected input parameters to each script.
 
 ## Technical Details
