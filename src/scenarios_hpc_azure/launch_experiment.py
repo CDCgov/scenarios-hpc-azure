@@ -35,7 +35,7 @@ parser.add_argument(
     "--timeout",
     type=int,
     required=False,
-    default=60,
+    default=600,
     help="timeout time in minutes to monitor job, does NOT terminate job after timeout is reached",
 )
 
