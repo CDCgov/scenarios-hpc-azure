@@ -14,10 +14,17 @@
 This repository is responsible for creating, visualizing, launching, and standardizing DynODE experiments.
 An __experiment__ is the broadest categorization of an effort or goal, e.g. Fitting a particular time period in a specific way is an experiment.
 
-When a user wants to launch an experiment, the individual run is called a __job__
+When a user wants to launch an experiment, the individual run is called a __job__,
+a job is broken down into a series of __tasks__ which represents the smallest
+chunk of work handled by an individual Azure VM.
 ## Quick Start
 
-TODO
+After installing scenarios-hpc-azure into your `poetry` environment you should
+have access to the scripts listed in `pyproject.toml` `[tool.poetry.scripts]` section.
+
+These scripts will aid you in creating and launching your experiment and
+are used as command line tools. Use the `-h` flag to get a brief description
+on the expected input parameters to each script.
 
 ## Technical Details
 
@@ -28,9 +35,7 @@ Thomas Hladish, Lead Data Scientist, utx5@cdc.gov, CDC/IOD/ORR/CFA
 
 Ariel Shurygin, Data Scientist, uva5@cdc.gov, CDC/IOD/ORR/CFA
 
-Kok Ben Toh, Data Scientist, tjk3@cdc.gov, CDC/IOD/ORR/CFA
-
-Michael Batista, Data Scientist, upi8@cdc.gov, CDC/IOD/ORR/CFA
+Ed Baskerville, Data Scientist, ah20@cdc.gov, CDC/IOD/ORR/CFA (Contract)
 
 ## General Disclaimer
 This repository was created for use by CDC programs to collaborate on public health related projects in support of the [CDC mission](https://www.cdc.gov/about/organization/mission.htm).  GitHub is not hosted by the CDC, but is a third party website used by CDC and its partners to share information and collaborate on software. CDC use of GitHub does not imply an endorsement of any one particular service, product, or enterprise.
