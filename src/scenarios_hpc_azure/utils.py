@@ -185,11 +185,12 @@ def create_experiment_framework(
             os.makedirs(path, exist_ok=True)
 
 
-def create_state_subdirectories(dir: str, state_names: list[str]):
+def create_state_subdirectories(
+    dir: str, state_names: list[str], empty_dir=False
+):
     """
     function to create an experiment directory `dir` and then create
     subfolders for each Postal Abreviation in `state_names`.
-    Will not override if `dir` or `dir/state_names[i]` already exists
 
     Parameters
     ------------
@@ -199,20 +200,27 @@ def create_state_subdirectories(dir: str, state_names: list[str]):
     `state_names`: list[str]
         list of USPS postal codes per state involved in the experiment, will create subfolders of `dir`
         with each code.
+    `empty_dir`: boolean
+        whether or not to empty the contents of `dir` before filling it
+        with state directories.
 
     Returns
     ------------
     None
     """
+    # empty the directory before refilling it again
+    if empty_dir:
+        print(
+            f"{bcolors.WARNING}removing and repopulating regions within {dir}{bcolors.ENDC}"
+        )
+        shutil.rmtree(dir)
     # Create the main directory if it does not exist
     if not os.path.exists(dir):
         os.makedirs(dir)
-    print(
-        f"{bcolors.WARNING}removing and repopulating regions within {dir}{bcolors.ENDC}"
-    )
     # Create subdirectories for each state inside the "states" folder
     for state in state_names:
         state_dir = os.path.join(dir, state)
+        # if the state exists, replace its files
         if os.path.exists(state_dir):
             os.rmdir(state_dir)
         os.makedirs(state_dir)

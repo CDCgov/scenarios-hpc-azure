@@ -109,10 +109,13 @@ def create():
         states = list(
             region_info.loc[region_info["stid"] == "hhsregion", "stname"]
         )
+    # empty the STATE_CONFIGS_DIR_NAME directory and refill it with configs
     utils.create_state_subdirectories(
         os.path.join(experiment_dir, STATE_CONFIGS_DIR_NAME),
         state_names=states,
+        empty_dir=True,
     )
+    # populate each state directory with region specific configs from templates
     utils.populate_config_files(experiment_dir, tcs, region_info)
     print(
         f"{utils.bcolors.OKGREEN}Successfully created and populated state directories{utils.bcolors.ENDC}"
