@@ -4,15 +4,33 @@ import os
 import pandas as pd
 
 from . import (
-    FIPS_TO_NAME_PATH,
-    POPULATIONS_PATH,
+    EXP_DIR_NAME,
     PP_SCRIPTS_DIR_NAME,
+    REGION_INFO_PATH,
     STATE_CONFIGS_DIR_NAME,
     TEMPLATE_CONFIGS_DIR_NAME,
     utils,
 )
 
-parser = argparse.ArgumentParser()
+description_str = """a script built to generate states/region specific config files
+from a set of template configs. Given an experiment name that
+matches a directory within `%s`, reads template configs from within the
+experiment's `%s` dir and programatically copies them over to
+state/region specific configs within the experiment's `%s` directory.""" % (
+    EXP_DIR_NAME,
+    TEMPLATE_CONFIGS_DIR_NAME,
+    STATE_CONFIGS_DIR_NAME,
+)
+epilog_str = (
+    """NOTE: running experiment_creator multiple times on the same
+experiment will cause all state/region configs within the experiment's %s
+directory to be cleared each time."""
+    % STATE_CONFIGS_DIR_NAME
+)
+
+parser = argparse.ArgumentParser(
+    prog="create_experiment", description=description_str, epilog=epilog_str
+)
 # experiment directory
 parser.add_argument(
     "-e",
@@ -28,7 +46,11 @@ parser.add_argument(
     type=str,
     required=True,
     nargs="+",
-    help="space separated list of str representing USPS postal code of each state",
+    help="space separated list of str representing "
+    "USPS postal code of each state. Can additionally pass the following "
+    "shortcuts... `all`: run all states/regions/territories. "
+    "`50states`: run states only."
+    "`hhsregions`: create a single directory for each hhs region.",
 )
 parser.add_argument(
     "-tc",
@@ -76,33 +98,27 @@ def create():
         experiment_dir, TEMPLATE_CONFIGS_DIR_NAME, tcs=tcs
     )
     # load our mapping CSVs
-    state_names_map = pd.read_csv(FIPS_TO_NAME_PATH)
-    state_pops_map = pd.read_csv(POPULATIONS_PATH)
-    # adding a USA row with the sum of all state pops
-    usa_pop_row = pd.DataFrame(
-        [
-            [
-                "US",
-                "United States",
-                sum(state_pops_map["POPULATION"]),
-                "+44.582076",  # latitude
-                "+103.461760",  # longitude
-            ]
-        ],
-        columns=state_pops_map.columns,
-    )
-    state_pops_map = pd.concat(
-        [state_pops_map, usa_pop_row], ignore_index=True
-    )
+    region_info = pd.read_csv(REGION_INFO_PATH)
     if "all" in states:
-        states = list(state_names_map["stusps"])
+        states = list(region_info["stusps"])
+    elif "50states" in states:
+        states = list(
+            region_info.loc[region_info["stid"] == "state", "stusps"]
+        )
+    elif "hhsregions" in states:
+        # stusps is a list of state abr for an hhsregion, so use stname
+        # to get the hhs1-hhs10 names
+        states = list(
+            region_info.loc[region_info["stid"] == "hhsregion", "stname"]
+        )
+    # empty the STATE_CONFIGS_DIR_NAME directory and refill it with configs
     utils.create_state_subdirectories(
         os.path.join(experiment_dir, STATE_CONFIGS_DIR_NAME),
         state_names=states,
+        empty_dir=True,
     )
-    utils.populate_config_files(
-        experiment_dir, tcs, state_names_map, state_pops_map
-    )
+    # populate each state directory with region specific configs from templates
+    utils.populate_config_files(experiment_dir, tcs, region_info)
     print(
         f"{utils.bcolors.OKGREEN}Successfully created and populated state directories{utils.bcolors.ENDC}"
     )
