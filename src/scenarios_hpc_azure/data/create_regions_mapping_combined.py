@@ -28,7 +28,7 @@ fip_to_name["stid"] = "state"
 fip_to_name.loc[fip_to_name["stname"] == "United States", "stid"] = "country"
 fip_to_name.loc[
     fip_to_name["stname"] == "District of Columbia", "stid"
-] = "district"
+] = "territory"
 fip_to_name.loc[fip_to_name["stname"] == "Puerto Rico", "stid"] = "territory"
 
 # merge all the dataframes together to get population, hhsregion, etc
@@ -50,7 +50,7 @@ add_hhs_regions["LATITUDE"] = None  # does not quite make sense for a region
 add_hhs_regions["LONGITUDE"] = None
 add_hhs_regions["hhsregion"] = add_hhs_regions["hhsregion"].astype(int)
 add_hhs_regions["STNAME"] = [
-    "hhs" + str(i) for i in add_hhs_regions["hhsregion"]
+    "HHS" + str(i) for i in add_hhs_regions["hhsregion"]
 ]
 # we dont have usps postal codes for hhs regions, so just use hhs1-hhs10
 add_hhs_regions["stusps"] = add_hhs_regions["STNAME"]
