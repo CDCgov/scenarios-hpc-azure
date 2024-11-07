@@ -5,6 +5,33 @@ from itertools import groupby
 from . import EXP_DIR_NAME, SECRETS_DIR_NAME, SECRETS_FILE_NAME, utils
 from .azure_utils import AzureExperimentLauncher
 
+description_str = """a script built to launch experiments created by
+the create_experiment script onto CFA's Azure hpc environment.
+
+implicitly this script requires a `secrets/` directory in the current working
+directory of the user in order to authenticate with Azure. All Azure
+related actions are performed using the `cfa_azure` repository here:
+https://github.com/CDCgov/cfa_azure
+"""
+epilog_str = """Note: the optional --explicit flag is meant to point
+to a CSV containing 1 column per flag passed to the `run_task.py`
+script running each state. For example if you wish to run 2 states (CA & NC)
+each with 2 scenarios (scenario1/2) and your `run_task.py` expects a
+`state` and `scenario` flag as command line arguments
+your csv would resemble something like: \n
+state,scenario\n
+CA,scenario1\n
+CA,scenario2\n
+NC,scenario1\n
+NC,scenario2\n
+
+It is important to note that the column titles are passed as the flag names
+with a `--` prepended, so the column names are important."""
+
+parser = argparse.ArgumentParser(
+    prog="launch_experiment", description=description_str, epilog=epilog_str
+)
+
 parser = argparse.ArgumentParser(description="Experiment Azure Launcher")
 parser.add_argument(
     "-j",
@@ -39,6 +66,13 @@ parser.add_argument(
     help="timeout time in minutes to monitor job, does NOT terminate job after timeout is reached",
 )
 
+parser.add_argument(
+    "--explicit",
+    type=str,
+    required=False,
+    help="path to optional explicit task arguments csv",
+)
+
 
 def launch():
     """The entry point into launching an experiment"""
@@ -47,6 +81,7 @@ def launch():
     job_id: str = args.job_id
     cpu_count: int = args.cpu
     timeout_mins: int = args.timeout
+    # explicit_csv_path: str = args.explicit
     docker_image_tag = "scenarios_image_%s" % job_id
     print(
         f"""{utils.bcolors.OKGREEN}Launching experiment {experiment_name}
