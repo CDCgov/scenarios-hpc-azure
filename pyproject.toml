@@ -7,7 +7,7 @@ license = "Apache License, Version 2.0, January 2004"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="708d7ec728f4f45743c1cf01f25590a6fdea23b3"}
+cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="ca9a314debc94b19ee548a493d38853c4d6292f5"}
 pandas = "^2.2.3"
 shiny = "^1.1.0"
 shinywidgets = "^0.3.3"
