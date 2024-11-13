@@ -127,7 +127,9 @@ def launch():
     if explicit_csv_path is not None:  # launch in explicit mode
         if os.path.exists(explicit_csv_path):
             task_arguments_df = pd.read_csv(explicit_csv_path)
-            launcher.launch_states_explicitly(task_arguments_df)
+            state_task_ids = launcher.launch_states_explicitly(
+                task_arguments_df
+            )
         else:
             raise FileNotFoundError(
                 "Unable to locate explicit csv at %s" % explicit_csv_path
