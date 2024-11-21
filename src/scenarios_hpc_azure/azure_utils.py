@@ -333,6 +333,10 @@ class AzureExperimentLauncher:
                 run_task_arguments = (
                     run_task_arguments + " --jobid %s" % self.job_id
                 )
+            print(
+                "adding explicit task with following flags: %s"
+                % run_task_arguments
+            )
             task_id = self.azure_client.add_task(
                 job_id=self.job_id,
                 docker_cmd="python %s %s"
