@@ -4,10 +4,14 @@ individual particles of posteriors produced by an experiment.
 """
 
 import os
+from functools import partial
+
+import matplotlib.pyplot as plt
 
 # ruff: noqa: E402
 import numpy as np
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
 from plotly.graph_objects import Figure
 from shiny import App, Session, reactive, render, ui
 from shinywidgets import output_widget, render_plotly, render_widget
@@ -18,11 +22,14 @@ from scenarios_hpc_azure.shiny_visualizers import shiny_utils as sutils
 INPUT_BLOB_NAME = "scenarios-mechanistic-input"
 OUTPUT_BLOB_NAME = "scenarios-mechanistic-output"
 # the path on your local machine where local projects are read in and azure data is stored
-SHINY_CACHE_PATH = "shiny_visualizers/shiny_cache"
+SHINY_CACHE_PATH = "src/scenarios_hpc_azure/shiny_visualizers/shiny_cache"
+SHINY_DOWNLOADS_PATH = (
+    "src/scenarios_hpc_azure/shiny_visualizers/shiny_downloads"
+)
 # this will reduce the time it takes to load the azure connection, but only shows
 # one experiment worth of data, which may be what you want...
 #  leave empty ("") to explore all experiments
-PRE_FILTER_EXPERIMENTS = ""  # fifty_state_season2_5strain_2202_2404
+PRE_FILTER_EXPERIMENTS = "fit_season2_4strain_2202_2404"
 # when loading the overview timelines csv for each run, columns
 # are expected to have names corresponding to the type of plot they create
 # vaccination_0_17 specifies the vaccination_ plot type, multiple columns may share
@@ -140,6 +147,10 @@ app_ui = ui.page_fluid(
                 multiple=True,
             ),
             ui.input_dark_mode(id="dark_mode", mode="dark"),
+            ui.input_action_button(
+                "download_button",
+                "Download All States As PDF Into Shiny Cache",
+            ),
             # ui.input_switch("dark_mode", "Dark Mode", True),
             width=450,
         ),
@@ -166,7 +177,7 @@ app_ui = ui.page_fluid(
             ),
             ui.nav_panel(
                 "Sample Violin Plots",
-                output_widget("plot_sample_violins"),
+                ui.output_plot("plot_sample_violins", width=1600, height=1600),
             ),
             ui.nav_panel(
                 "Config Visualizer",
@@ -375,8 +386,10 @@ def server(input, output, session: Session):
 
     @output(id="plot_prior_distributions")
     @render.plot
-    @reactive.event(input.action_button)
+    @reactive.event(input.action_button, input.download_button)
     def plot_prior_distributions():
+        print("firing plot prior distributions")
+        print(input.download_button)
         exp = input.experiment()
         job_id = input.job_id()
         states = input.states()
@@ -388,13 +401,43 @@ def server(input, output, session: Session):
         )
         # we have the figure, now update the light/dark mode depending on the switch
         fig = sutils.load_prior_distributions_plot(cache_paths[0], theme)
+
+        if input.download_button._value:  # 1 if triggered, 0 otherwise
+            pdf_save_path = os.path.join(
+                SHINY_DOWNLOADS_PATH,
+                "priors_and_posteriors_%s_%s.pdf" % (exp, job_id),
+            )
+            # download all states in case they were not already in the cache path
+            all_states_in_this_job = [
+                state.name
+                for state in output_blob.subdirs[exp]
+                .subdirs[job_id]
+                .subdirs.values()
+            ]
+            print(all_states_in_this_job)
+            cache_paths_all_states = sutils.get_azure_files(
+                exp,
+                job_id,
+                all_states_in_this_job,
+                scenario,
+                azure_client,
+                SHINY_CACHE_PATH,
+            )
+            download_all_states_as_pdf(
+                partial(
+                    sutils.load_prior_distributions_plot,
+                    matplotlib_theme=theme,
+                ),
+                cache_paths_all_states,
+                save_path=pdf_save_path,
+            )
         # we have the figure, now update the light/dark mode depending on the switch
         print("displaying prior distributions")
         return fig
 
     @output(id="plot_sample_violins")
-    @render_widget
-    @reactive.event(input.action_button)
+    @render.plot
+    @reactive.event(input.action_button, input.download_button)
     def plot_sample_violins():
         """
         Gets the files associated with that experiment+job+state+scenario combo
@@ -407,15 +450,71 @@ def server(input, output, session: Session):
         cache_paths = sutils.get_azure_files(
             exp, job_id, states, scenario, azure_client, SHINY_CACHE_PATH
         )
+        theme = sutils.shiny_to_matplotlib_theme(input.dark_mode())
         # we have the figure, now update the light/dark mode depending on the switch
         fig = sutils.load_checkpoint_inference_violin_plots(
             cache_paths[0],
-            overview_subplot_size=1500,
+            matplotlib_theme=theme,
         )
-        # we have the figure, now update the light/dark mode depending on the switch
-        theme = sutils.shiny_to_plotly_theme(input.dark_mode())
-        fig.update_layout(template=theme)
+        if input.download_button._value:  # 1 if triggered, 0 otherwise
+            pdf_save_path = os.path.join(
+                SHINY_DOWNLOADS_PATH,
+                "violin_plots_%s_%s.pdf" % (exp, job_id),
+            )
+            # download all states in case they were not already in the cache path
+            all_states_in_this_job = [
+                state.name
+                for state in output_blob.subdirs[exp]
+                .subdirs[job_id]
+                .subdirs.values()
+            ]
+            cache_paths_all_states = sutils.get_azure_files(
+                exp,
+                job_id,
+                all_states_in_this_job,
+                scenario,
+                azure_client,
+                SHINY_CACHE_PATH,
+            )
+            download_all_states_as_pdf(
+                partial(
+                    sutils.load_checkpoint_inference_violin_plots,
+                    matplotlib_theme=theme,
+                ),
+                cache_paths_all_states,
+                save_path=pdf_save_path,
+            )
         return fig
+
+    def download_all_states_as_pdf(
+        visualizer_fn, cache_paths: list[str], save_path: str
+    ):
+        """takes a function that would normally be visualizing a single state
+        and instead runs it on all the states included in `cache_paths` and
+        saves it at a CSV. Depending on how long it takes to visualize a single
+        state this could take a while.
+
+        Parameters
+        ----------
+        visualizer_fn : function(str) -> plt.Figure
+            a function which takes in a cache path str and returns a matplotlib
+            figure for that state/scenario
+        cache_paths : list[str]
+            list of paths to all states/scenarios wanting to be placed into
+            the pdf
+        save_path : str
+            path to save file to, includes file name.
+        """
+        print("generating a figure for each of the 50 states")
+        figs = []
+        for cache_path in cache_paths:
+            fig = visualizer_fn(cache_path)
+            figs.append(fig)
+        pdf_pages = PdfPages(save_path)
+        for f in figs:
+            pdf_pages.savefig(f)
+            plt.close(f)
+        pdf_pages.close()
 
 
 app = App(app_ui, server)
