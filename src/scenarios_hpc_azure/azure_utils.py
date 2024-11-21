@@ -1,6 +1,7 @@
 import os
 
 import cfa_azure.helpers
+import pandas as pd
 from azure.core.paging import ItemPaged
 from cfa_azure.clients import AzureClient
 
@@ -246,7 +247,7 @@ class AzureExperimentLauncher:
         Returns
         -------
         list[str]
-            list of all tasks launched under `job_id`
+            list of all tasks launched by this method.
         """
         # command to run the job, if we have already launched states previously, dont recreate the job
         if not self.job_launched:
@@ -274,6 +275,77 @@ class AzureExperimentLauncher:
                 )
                 # append this list onto our running list of tasks
                 task_ids += task_id
+        return task_ids
+
+    def launch_states_explicitly(
+        self,
+        task_arguments_df: pd.DataFrame,
+        depend_on_task_ids: list[str] = None,
+    ):
+        """Similar to `launch_states()` this method launches
+        your states based on command line arguments provided by
+        `task_arguments_df` where `task_arguments_df.columns` corresponds
+        to expected command line arguments passed to `self.runner_path_docker`
+        (your run_task.py)
+
+        Parameters
+        ----------
+        task_arguments_df : pd.DataFrame
+            a pandas dataframe where column titles are flag names and each
+            row's values is a separate task launched to Azure with those
+            flag values.
+        depend_on_task_ids: list[str], optional
+            list of task ids on which each task depends on finishing to start themselves, defaults to None
+
+        Returns
+        -------
+        list[str]
+            list of all tasks launched by this method.
+        """
+        command_line_arguments = tuple(task_arguments_df.columns)
+        # command to run the job, if we have already launched states previously, dont recreate the job
+        if not self.job_launched:
+            self.azure_client.add_job(job_id=self.job_id)
+            self.job_launched = True
+        # upload the experiment folder so that the runner_path_docker & states_path_docker point to the correct places
+        # here we pass `location=self.experiment_path_blob` because we are not uploading from the docker container
+        # therefore we dont need the /input/ mount directory
+        self._upload_experiment_to_blob()
+        task_ids = []
+        # add a task for each row of task_arguments_df
+        for task_row in task_arguments_df.itertuples(index=False):
+            flag_names_and_vals = zip(command_line_arguments, task_row)
+            # add optional suffix to the task-id if `state` in the csv
+            if "state" in command_line_arguments:
+                idx = command_line_arguments.index("state")
+                state_suffix = task_row[idx]
+            else:  # no optional suffixes
+                state_suffix = None
+            # building up the flag names and their values e.g --state CA
+            param_strs = [
+                "--%s %s" % (flag_name, flag_val)
+                for (flag_name, flag_val) in flag_names_and_vals
+            ]
+            run_task_arguments = " ".join(param_strs)
+            # we dont require the user to explicitly write the jobid column
+            # in their explicit csv, it is required by launch_experiment script
+            if "--jobid" not in run_task_arguments:
+                run_task_arguments = (
+                    run_task_arguments + " --jobid %s" % self.job_id
+                )
+            print(
+                "adding explicit task with following flags: %s"
+                % run_task_arguments
+            )
+            task_id = self.azure_client.add_task(
+                job_id=self.job_id,
+                docker_cmd="python %s %s"
+                % (self.runner_path_docker, run_task_arguments),
+                depends_on=depend_on_task_ids,
+                name_suffix=state_suffix,
+            )
+            # append this list onto our running list of tasks
+            task_ids += task_id
         return task_ids
 
     def _find_postprocess_file_docker(
