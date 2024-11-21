@@ -1,3 +1,4 @@
+import copy
 import json
 import math
 import os
@@ -13,6 +14,8 @@ import plotly.graph_objects
 # import plotly.graph_objs as go
 import seaborn as sns
 from cfa_azure.clients import AzureClient
+from dynode import vis_utils
+from dynode.config import distribution_converter
 from matplotlib.colors import LinearSegmentedColormap
 from plotly.subplots import make_subplots
 from scipy.stats import pearsonr
@@ -52,11 +55,13 @@ def construct_tree(file_paths: Iterable[str], root=None) -> Node:
         if "." in path:
             directories, filename = path.rsplit("/", 1)
             current_node = root
-            for directory in directories.split("/"):
-                if directory not in current_node.subdirs:
-                    current_node.subdirs[directory] = Node(directory)
-                current_node = current_node.subdirs[directory]
-            current_node.subdirs[filename] = Node(filename)
+            # experiment/jobid/state minimum depth 3
+            if len(directories.split("/")) >= 3:
+                for directory in directories.split("/"):
+                    if directory not in current_node.subdirs:
+                        current_node.subdirs[directory] = Node(directory)
+                    current_node = current_node.subdirs[directory]
+                current_node.subdirs[filename] = Node(filename)
     return root
 
 
@@ -423,6 +428,83 @@ def load_checkpoint_inference_chains(
     return fig
 
 
+def load_prior_distributions_plot(cache_path, matplotlib_theme):
+    state = cache_path.split("/")[-2]
+    priors_path = os.path.join(cache_path, "config_inferer_used.json")
+    posteriors_path = os.path.join(cache_path, "checkpoint.json")
+    if os.path.exists(priors_path):
+        # read the config file, transform all distributions into
+        # numpyro distribution objects so they may be sampled and displayed
+        config_json_str = open(priors_path).read()
+        config = json.loads(
+            config_json_str, object_hook=distribution_converter
+        )
+        styles = ["seaborn-v0_8-colorblind", matplotlib_theme]
+        hist_kwargs = copy.copy(
+            vis_utils.plot_prior_distributions.__defaults__[2]
+        )
+        median_line_kwargs = copy.copy(
+            vis_utils.plot_prior_distributions.__defaults__[3]
+        )
+        if os.path.exists(posteriors_path):
+            # if we will eventually be overlaying posteriors, we will need
+            # our plot labels to differ the priors vs posteriors
+            hist_kwargs["label"] = "priors"
+            hist_kwargs["color"] = "#046b99"
+            hist_kwargs["alpha"] = 0.5
+            median_line_kwargs["color"] = "#046b99"
+        fig = vis_utils.plot_prior_distributions(
+            config,
+            matplotlib_style=styles,
+            hist_kwargs=hist_kwargs,
+            median_line_kwargs=median_line_kwargs,
+        )
+        if os.path.exists(posteriors_path):
+            print("overlaying posteriors onto axis object")
+            # overlay the posteriors onto the priors if they exist
+            posteriors = json.load(open(posteriors_path))
+            posteriors = prepare_posterior_data(
+                posteriors, flatten_chains=True, drop_final_timesteps=True
+            )
+            # going to need the axis objects back to modify them
+            axs = fig.get_axes()
+            for param_name in posteriors:
+                # search the correct axis object to modify
+                ax = next(
+                    (ax for ax in axs if ax.get_title() == param_name), None
+                )
+                # sometimes parameters not in the config are sampled, ignore those
+                if ax is not None:
+                    ax.hist(
+                        posteriors[param_name],
+                        label="posteriors",
+                        alpha=0.5,
+                        color="#2e8540",
+                        **vis_utils.plot_prior_distributions.__defaults__[2],
+                    )
+                    ax.axvline(
+                        np.median(posteriors[param_name]),
+                        linestyle="dotted",
+                        linewidth=3,
+                        label="posterior median",
+                        color="#2e8540",
+                    )
+                    valid_ax = ax
+                    # save the last valid axis object to produce a legend with
+            # remove previous legend and replace it with updated one
+            fig.legends[0].remove()
+            handles, labels = valid_ax.get_legend_handles_labels()
+            fig.legend(handles, labels, loc="outside upper right", ncols=2)
+            fig.suptitle("priors and posteriors visualized: %s" % state)
+
+    else:
+        raise FileNotFoundError(
+            "%s does not exist, either the experiment did "
+            "not save a config used or loading files failed" % priors_path
+        )
+    return fig
+
+
 def load_checkpoint_inference_correlations(
     cache_path,
     overview_subplot_size: int,
@@ -481,7 +563,7 @@ def load_checkpoint_inference_correlations(
 
 def load_checkpoint_inference_violin_plots(
     cache_path,
-    overview_subplot_size: int,
+    matplotlib_theme: str,
 ) -> plotly.graph_objs.Figure:
     """Given a path a folder containing downloaded azure files, checks for the existence
     of the checkpoint.json file, if it exists, returns a figure of one violin plot per
@@ -498,50 +580,32 @@ def load_checkpoint_inference_violin_plots(
         plotly Figure with each of the sampled parameters as its own violin plot
     """
     checkpoint_path = os.path.join(cache_path, "checkpoint.json")
-    if not os.path.exists(checkpoint_path):
+    priors_path = os.path.join(cache_path, "config_inferer_used.json")
+    state = cache_path.split("/")[-2]
+    if not os.path.exists(checkpoint_path) and not os.path.exists(priors_path):
         raise FileNotFoundError(
-            "attempted to visualize an inference correlation without an `checkpoint.json` file"
+            "attempted to visualize violin plots without priors or posteriors"
         )
-    posteriors = json.load(open(checkpoint_path, "r"))
-    # flatten any usage of numpyro.plate into separate parameters,
-    # otherwise youll get nonsense in the next step
-    posteriors = prepare_posterior_data(
-        posteriors, flatten_chains=True, drop_final_timesteps=True
-    )
-    num_sampled_parameters = len(posteriors.keys())
-    # we want a mostly square subplot, so lets sqrt and take floor/ceil to deal with odd numbers
-    num_rows = math.isqrt(num_sampled_parameters)
-    num_cols = math.ceil(num_sampled_parameters / num_rows)
-    # we will title these subplots and make sure to leave blank titles in case of odd numbers
-    subplot_titles_padded = list(posteriors.keys()) + [""] * (
-        num_rows * num_cols - num_sampled_parameters
-    )
-    fig = make_subplots(
-        num_rows,
-        num_cols,
-        horizontal_spacing=0.01,
-        vertical_spacing=0.08,
-        subplot_titles=subplot_titles_padded,
-    )
-    for i, particles in enumerate(posteriors.values()):
-        row = int(i / num_cols) + 1
-        col = i % num_cols + 1
-        # create violin plot, center it and have outliers show up as points inside the plot
-        data = plotly.graph_objects.Violin(
-            y=particles, pointpos=0, hoverinfo="skip"
+    posteriors = None
+    priors = None
+    if os.path.exists(checkpoint_path):
+        posteriors = json.load(open(checkpoint_path, "r"))
+        # flatten any usage of numpyro.plate into separate parameters,
+        # otherwise youll get nonsense in the next step
+        posteriors = prepare_posterior_data(
+            posteriors, flatten_chains=True, drop_final_timesteps=True
         )
-        fig.add_trace(data, row=row, col=col)
-    fig.update_layout(
-        width=overview_subplot_size + 50,
-        height=overview_subplot_size + 50,
-        title_text="",
-        legend_tracegroupgap=0,
-        hovermode=False,
+    if os.path.exists(priors_path):
+        priors = json.load(
+            open(priors_path, "r"), object_hook=distribution_converter
+        )
+        priors = vis_utils._sample_prior_distributions(priors, 5000)
+    styles = ["seaborn-v0_8-colorblind", matplotlib_theme]
+
+    fig = vis_utils.plot_violin_plots(
+        priors=priors, posteriors=posteriors, matplotlib_style=styles
     )
-    # x axis labels are not useful on violin plots
-    fig.update_xaxes(visible=False, showticklabels=False)
-    # turn off legends since the subplot title tells you what parameter is being shown
-    fig.update_traces(showlegend=False)
+    fig.suptitle("Violin Plot of Parameters : %s" % state)
     return fig
 
 
@@ -964,3 +1028,22 @@ def shiny_to_plotly_theme(shiny_theme: str):
         plotly theme as str, used in `fig.update_layout(template=theme)`
     """
     return "plotly_%s" % (shiny_theme if shiny_theme == "dark" else "white")
+
+
+def shiny_to_matplotlib_theme(shiny_theme: str):
+    """shiny themes are "dark" and "light", matplotlib themes are
+    "dark_background" and "plotly_white", this function converts from shiny to plotly theme names
+    Parameters
+    ----------
+    shiny_theme : str
+        shiny theme as str
+    Returns
+    -------
+    str
+        plotly theme as str, used in `fig.update_layout(template=theme)`
+    """
+    return (
+        "dark_background"
+        if shiny_theme == "dark"
+        else "tableau-colorblind10"  # "_classic_test_patch"
+    )

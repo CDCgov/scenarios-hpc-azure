@@ -18,6 +18,9 @@ matplotlib = "^3.9.2"
 tqdm = "^4.66.6"
 pytest = "^8.3.3"
 
+[tool.poetry.dev-dependencies]
+#dynode = {path = "/home/uva5/repos/DynODE", develop=true}
+dynode = {git = "https://github.com/CDCgov/DynODE.git", branch="main"}
 
 [build-system]
 requires = ["poetry-core"]

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sn
-from resp_ode import CovidSeroInitializer, utils
+from dynode import CovidSeroInitializer, utils
 from shiny import App, render, ui
 
 CONFIG_GLOBAL_PATH = "src/config/config_global.json"
