@@ -322,12 +322,17 @@ class AzureExperimentLauncher:
             else:  # no optional suffixes
                 state_suffix = None
             # building up the flag names and their values e.g --state CA
-            run_task_arguments = " ".join(
-                [
-                    "--%s %s" % (flag_name, flag_val)
-                    for (flag_name, flag_val) in flag_names_and_vals
-                ]
-            )
+            param_strs = [
+                "--%s %s" % (flag_name, flag_val)
+                for (flag_name, flag_val) in flag_names_and_vals
+            ]
+            run_task_arguments = " ".join(param_strs)
+            # we dont require the user to explicitly write the jobid column
+            # in their explicit csv, it is required by launch_experiment script
+            if "--jobid" not in run_task_arguments:
+                run_task_arguments = (
+                    run_task_arguments + " --jobid %s" % self.job_id
+                )
             task_id = self.azure_client.add_task(
                 job_id=self.job_id,
                 docker_cmd="python %s %s"
