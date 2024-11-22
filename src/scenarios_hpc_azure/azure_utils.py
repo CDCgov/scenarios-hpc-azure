@@ -474,6 +474,25 @@ class AzureExperimentLauncher:
 
         return postprocess_task_ids
 
+    def monitor_and_download(
+        self,
+        timeout_mins: int,
+        blob_paths: list[str],
+        dest: str,
+        override_existing: bool = False,
+        blob_container_name: str = "scenarios-mechanistic-output",
+    ):
+        output_dir = os.path.join(self._experiment_name, self.job_id)
+        print("downloading from %s on blob" % output_dir)
+        # monitor the job, execution passed back when job completes, or after timeout_mins minutes
+        self.azure_client.monitor_job(self.job_id, timeout=timeout_mins)
+        # job complete before `timeout_mins`, download output_dir -> dest
+        self.azure_client.download_directory(
+            output_dir,
+            dest_path=dest,
+            container_name=blob_container_name,
+        )
+
 
 def build_azure_connection(
     config_path: str = "secrets/configuration_cfaazurebatchprd.toml",
