@@ -150,4 +150,4 @@ def launch():
         depend_on_task_ids=state_task_ids,
     )
     all_tasks_run += state_task_ids + postprocessing_tasks
-    launcher.monitor_and_download(timeout_mins, [], dest_path)
+    launcher.monitor_and_download(timeout_mins, dest_path)
