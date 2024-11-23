@@ -480,7 +480,7 @@ class AzureExperimentLauncher:
         timeout_mins: int,
         dest: str,
         blob_paths: Optional[list[str]] = None,
-        override_existing: bool = False,
+        override_existing: bool = True,
     ) -> list[str]:
         """Monitors a currently launched job, downloads job's outputs
         upon completion to `dest/` directory on callers machine. Overwrites
