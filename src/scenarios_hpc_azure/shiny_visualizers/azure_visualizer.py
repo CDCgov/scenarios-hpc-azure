@@ -29,7 +29,7 @@ SHINY_DOWNLOADS_PATH = (
 # this will reduce the time it takes to load the azure connection, but only shows
 # one experiment worth of data, which may be what you want...
 #  leave empty ("") to explore all experiments
-PRE_FILTER_EXPERIMENTS = "fit_season2_4strain_2202_2404"
+PRE_FILTER_EXPERIMENTS = ""
 # when loading the overview timelines csv for each run, columns
 # are expected to have names corresponding to the type of plot they create
 # vaccination_0_17 specifies the vaccination_ plot type, multiple columns may share
@@ -483,11 +483,15 @@ def server(input, output, session: Session):
                 ),
                 cache_paths_all_states,
                 save_path=pdf_save_path,
+                align_axis=True,
             )
         return fig
 
     def download_all_states_as_pdf(
-        visualizer_fn, cache_paths: list[str], save_path: str
+        visualizer_fn,
+        cache_paths: list[str],
+        save_path: str,
+        align_axis=False,
     ):
         """takes a function that would normally be visualizing a single state
         and instead runs it on all the states included in `cache_paths` and
@@ -504,12 +508,58 @@ def server(input, output, session: Session):
             the pdf
         save_path : str
             path to save file to, includes file name.
+        align_axis : bool
+            across figures on each page of the PDF, make sure that
+            y axis of each subplot aligns is the same.
+            E.g figs[0].axes[i].yaxis == figs[1].axes[i].yaxis forall i
         """
         print("generating a figure for each of the 50 states")
-        figs = []
+        figs: list[plt.Figure] = []
         for cache_path in cache_paths:
-            fig = visualizer_fn(cache_path)
+            fig: plt.Figure = visualizer_fn(cache_path)
             figs.append(fig)
+        if align_axis:
+            first_fig = figs[0]
+            first_fig.canvas.draw()
+            renderer = first_fig.canvas.get_renderer()
+            # Calculate bbox for first subplot in display units
+            first_subplot = first_fig.get_axes()[0]
+            bbox = first_subplot.get_tightbbox(renderer).transformed(
+                first_fig.dpi_scale_trans.inverted()
+            )
+            # Calculate width and height from bbox
+            subplot_width_inch, subplot_height_inch = (
+                1.25 * bbox.width,
+                bbox.height,
+            )
+
+            # Now loop through all figures and set their sizes accordingly
+            for fig in figs:
+                # Adjust figure size based on number of subplots and desired subplot size
+                nrows, ncols = (
+                    fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+                )
+                fig.set_size_inches(
+                    w=ncols * subplot_width_inch, h=nrows * subplot_height_inch
+                )
+
+            num_subplots = len(figs[0].get_axes())
+
+            # Initialize lists to store global min and max y-values for each subplot
+            global_ymin = [float("inf")] * num_subplots
+            global_ymax = [-float("inf")] * num_subplots
+
+            # Loop over all figures and subplots to find global min/max y-values
+            for fig in figs:
+                for i, ax in enumerate(fig.get_axes()):
+                    ymin, ymax = ax.get_ylim()
+                    global_ymin[i] = min(global_ymin[i], ymin)
+                    global_ymax[i] = max(global_ymax[i], ymax)
+
+            # Now loop again to set the global y-limits for each subplot
+            for fig in figs:
+                for i, ax in enumerate(fig.get_axes()):
+                    ax.set_ylim(global_ymin[i], global_ymax[i])
         pdf_pages = PdfPages(save_path)
         for f in figs:
             pdf_pages.savefig(f)
