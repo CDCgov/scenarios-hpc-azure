@@ -156,9 +156,9 @@ def get_population_sizes(
         path to the directory containing age distribution and pop count csvs
     """
     states = [
-        state_name_lookup[state_name_lookup["abbreviation"] == state][
-            "location_name"
-        ].iloc[0]
+        state_name_lookup[state_name_lookup["stusps"] == state]["stname"].iloc[
+            0
+        ]
         for state in states
     ]
     pop_sizes = []
