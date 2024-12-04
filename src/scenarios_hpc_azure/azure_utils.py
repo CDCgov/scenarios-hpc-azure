@@ -6,6 +6,8 @@ import pandas as pd
 from azure.core.paging import ItemPaged
 from cfa_azure.clients import AzureClient
 
+from .utils import bcolors
+
 
 class AzureExperimentLauncher:
     def __init__(
@@ -518,6 +520,12 @@ class AzureExperimentLauncher:
         # monitor the job, execution passed back when job completes, or after timeout_mins minutes
         self.azure_client.monitor_job(self.job_id, timeout=timeout_mins)
         # job complete before `timeout_mins`, download output_dir -> dest
+        print(
+            (
+                f"{bcolors.WARNING} downloading files from blob {output_dir} "
+                f"to {dest} overwriting any existing files. {bcolors.ENDC}"
+            )
+        )
         written_dirs = download_directory_from_azure(
             self.azure_client,
             azure_dirs=output_dir,

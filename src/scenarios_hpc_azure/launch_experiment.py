@@ -150,4 +150,17 @@ def launch():
         depend_on_task_ids=state_task_ids,
     )
     all_tasks_run += state_task_ids + postprocessing_tasks
-    launcher.monitor_and_download(timeout_mins, dest_path)
+    if dest_path is not None:
+        if os.path.exists(dest_path):
+            launcher.monitor_and_download(timeout_mins, dest_path)
+        else:
+            print(
+                (
+                    f"{utils.bcolors.WARNING} save path {dest_path} is "
+                    f"unable to be found, monitoring job without download "
+                    f"{utils.bcolors.ENDC}"
+                )
+            )
+            launcher.azure_client.monitor_job(job_id, timeout=timeout_mins)
+    else:
+        launcher.azure_client.monitor_job(job_id, timeout=timeout_mins)
