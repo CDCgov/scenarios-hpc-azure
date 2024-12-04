@@ -403,7 +403,7 @@ files = [
 
 [[package]]
 name = "cfa-azure"
-version = "1.0.13"
+version = "1.1.2"
 description = "module for use with Azure and Azure Batch"
 optional = false
 python-versions = "^3.8"
@@ -428,8 +428,8 @@ toml = "^0.10.2"
 [package.source]
 type = "git"
 url = "https://github.com/CDCgov/cfa_azure.git"
-reference = "0be3553b3a6026fb10783cdd25e36ffd55abffca"
-resolved_reference = "0be3553b3a6026fb10783cdd25e36ffd55abffca"
+reference = "3786cc8023c5412bd275b042d1fb23892aa2b6dd"
+resolved_reference = "3786cc8023c5412bd275b042d1fb23892aa2b6dd"
 
 [[package]]
 name = "cffi"
@@ -1047,8 +1047,8 @@ seaborn = ">=0.13.2"
 [package.source]
 type = "git"
 url = "https://github.com/CDCgov/DynODE.git"
-reference = "main"
-resolved_reference = "08582bf7585a1db2f7043aafbb593ebf9e04d35f"
+reference = "vis-utils-upgrade"
+resolved_reference = "1df894638d217cb340cdc4997b6a546c8d1b45dc"
 
 [[package]]
 name = "epiweeks"
@@ -4104,4 +4104,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c62dadbe99b9bb7d66be640c14708e548ba902992ca50aea3a8379414eeeed6e"
+content-hash = "ec5a3e0d68a550e3d0d95839e02f3448c32874f3501b595db05b981e1ad9b493"

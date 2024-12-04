@@ -7,7 +7,7 @@ license = "Apache License, Version 2.0, January 2004"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="0be3553b3a6026fb10783cdd25e36ffd55abffca"}
+cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="3786cc8023c5412bd275b042d1fb23892aa2b6dd"}
 pandas = "^2.2.3"
 shiny = "^1.1.0"
 shinywidgets = "^0.3.3"
@@ -20,7 +20,7 @@ pytest = "^8.3.3"
 
 [tool.poetry.dev-dependencies]
 #dynode = {path = "../DynODE", develop=true}
-dynode = {git = "https://github.com/CDCgov/DynODE.git", branch="main"}
+dynode = {git = "https://github.com/CDCgov/DynODE.git", branch="vis-utils-upgrade"}
 
 [build-system]
 requires = ["poetry-core"]
