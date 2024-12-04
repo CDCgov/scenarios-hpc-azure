@@ -1,9 +1,12 @@
 import os
+from typing import Optional
 
 import cfa_azure.helpers
 import pandas as pd
 from azure.core.paging import ItemPaged
 from cfa_azure.clients import AzureClient
+
+from .utils import bcolors
 
 
 class AzureExperimentLauncher:
@@ -473,6 +476,63 @@ class AzureExperimentLauncher:
             postprocess_task_ids += execution_bundle_ids
 
         return postprocess_task_ids
+
+    def monitor_and_download(
+        self,
+        timeout_mins: int,
+        dest: str,
+        blob_paths: Optional[list[str]] = None,
+    ) -> list[str]:
+        """Monitors a currently launched job, downloads job's outputs
+        upon completion to `dest/` directory on callers machine. Overwrites
+        name collisions if requested
+
+        Parameters
+        ----------
+        timeout_mins : int
+            how long to monitor the job before raising an error, does NOT
+            halt execution on Azure Batch if this limit is reached, simply
+            stops monitoring and does not download
+        dest : str
+            source destination for downloaded files on users machine
+        blob_paths : list[str], optional
+            list of files from the blob you wish you retrieve,
+            None retrieves the entire experiment/jobid/ directory,
+            containing all output files. by default None
+        override_existing : bool, optional
+            whether or not to overwrite existing files with same path in `dest`
+            , by default False
+
+        Returns
+        -------
+        list[str]
+            paths to downloaded files in `dest`
+
+        Raises
+        -------
+        RuntimeError if `timeout_mins` is reached before job completes
+        """
+        output_dir = (
+            os.path.join(self._experiment_name, self.job_id)
+            if blob_paths is None
+            else blob_paths
+        )
+        # monitor the job, execution passed back when job completes, or after timeout_mins minutes
+        self.azure_client.monitor_job(self.job_id, timeout=timeout_mins)
+        # job complete before `timeout_mins`, download output_dir -> dest
+        print(
+            (
+                f"{bcolors.WARNING} downloading files from blob {output_dir} "
+                f"to {dest} overwriting any existing files. {bcolors.ENDC}"
+            )
+        )
+        written_dirs = download_directory_from_azure(
+            self.azure_client,
+            azure_dirs=output_dir,
+            dest=dest,
+            overwrite=True,
+        )
+        return written_dirs
 
 
 def build_azure_connection(
