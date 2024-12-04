@@ -140,5 +140,8 @@ def launch():
         execution_order=postprocess_execution_order,
         depend_on_task_ids=state_task_ids,
     )
+    # after all states and postprocessing launched, we add a final flag
+    # which tells the job to mark itself as completed when all tasks finish
+    launcher.azure_client.mark_job_completed_after_tasks_run(job_id)
     all_tasks_run += state_task_ids + postprocessing_tasks
     launcher.azure_client.monitor_job(job_id, timeout=timeout_mins)
