@@ -1047,8 +1047,8 @@ seaborn = ">=0.13.2"
 [package.source]
 type = "git"
 url = "https://github.com/CDCgov/DynODE.git"
-reference = "vis-utils-upgrade"
-resolved_reference = "1df894638d217cb340cdc4997b6a546c8d1b45dc"
+reference = "main"
+resolved_reference = "08582bf7585a1db2f7043aafbb593ebf9e04d35f"
 
 [[package]]
 name = "epiweeks"
@@ -4104,4 +4104,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ec5a3e0d68a550e3d0d95839e02f3448c32874f3501b595db05b981e1ad9b493"
+content-hash = "2aeb1c835f7f6e6ff586140092040b2d072b748078c91ad2611671cb3f7299dd"

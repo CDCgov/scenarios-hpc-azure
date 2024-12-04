@@ -20,7 +20,7 @@ pytest = "^8.3.3"
 
 [tool.poetry.dev-dependencies]
 #dynode = {path = "../DynODE", develop=true}
-dynode = {git = "https://github.com/CDCgov/DynODE.git", branch="vis-utils-upgrade"}
+dynode = {git = "https://github.com/CDCgov/DynODE.git", branch="main"}
 
 [build-system]
 requires = ["poetry-core"]
