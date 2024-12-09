@@ -33,7 +33,7 @@ parser.add_argument(
     type=str,
     help="job ID of the azure job, must be unique",
     metavar="",
-    required=True,
+    required=False,
 )
 parser.add_argument(
     "-e",
@@ -42,14 +42,13 @@ parser.add_argument(
     help="the experiment name, must match the experiment directory within %s"
     % EXP_DIR_NAME,
     metavar="",
-    required=True,
+    required=False,
 )
 parser.add_argument(
     "-c",
     "--cpu",
     type=int,
     required=False,
-    default=8,
     metavar="",
     help="CPU count of machines running each task, supports 2, 4, or 8 cores",
 )
@@ -59,7 +58,6 @@ parser.add_argument(
     "--timeout",
     type=int,
     required=False,
-    default=600,
     metavar="",
     help="timeout time in minutes to monitor job, does NOT terminate job after timeout is reached",
 )
@@ -72,15 +70,34 @@ parser.add_argument(
     help="path to optional explicit task arguments csv",
 )
 
+parser.add_argument(
+    "--config",
+    type=str,
+    required=False,
+    metavar="",
+    help="path to launch_experiment configuration json file, containing all flag "
+    "names and values to be passed to this script",
+)
+
+default_param_values = {"timeout": 600, "cpu": 8}
+
 
 def launch():
     """The entry point into launching an experiment"""
-    args = parser.parse_args()
-    experiment_name: str = args.experiment_name
-    job_id: str = args.job_id
-    cpu_count: int = args.cpu
-    timeout_mins: int = args.timeout
-    explicit_csv_path: str = args.explicit
+    args = parser.parse_args().__dict__
+
+    if args["config"]:
+        print(args)
+        # fill args dict with values from args.config json file
+        args = utils.combine_args(args, args["config"])
+        # fill in defaults if neither args nor args.config have a valid value
+        args = utils._combine_dicts(args, default_param_values)
+    experiment_name: str = args["experiment_name"]
+    job_id: str = args["job_id"]
+    cpu_count: int = args["cpu"]
+    timeout_mins: int = args["timeout"]
+    explicit_csv_path: str = args["explicit"]
+    utils.validate_args(args)
     docker_image_tag = "scenarios_image_%s" % job_id
     print(
         (

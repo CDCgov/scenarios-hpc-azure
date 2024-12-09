@@ -29,7 +29,7 @@ SHINY_DOWNLOADS_PATH = (
 # this will reduce the time it takes to load the azure connection, but only shows
 # one experiment worth of data, which may be what you want...
 #  leave empty ("") to explore all experiments
-PRE_FILTER_EXPERIMENTS = "fit_season2_4strain_2202_2404"
+PRE_FILTER_EXPERIMENTS = "projection_outlook_24_11"
 # when loading the overview timelines csv for each run, columns
 # are expected to have names corresponding to the type of plot they create
 # vaccination_0_17 specifies the vaccination_ plot type, multiple columns may share
