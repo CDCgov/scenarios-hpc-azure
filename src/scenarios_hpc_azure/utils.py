@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-from argparse import ArgumentError
 
 import pandas as pd
 
@@ -358,84 +357,4 @@ def code_to_pop(state_name: str, state_pops_map: pd.DataFrame):
     else:
         raise KeyError(
             "unable to find population for state name %s" % state_name
-        )
-
-
-def combine_args(args: dict[str], config_path: str) -> dict[str]:
-    """Takes a dictionary of arguments to a script and fills in any
-    missing / None parameters within `args` from a json located at `config_path`.
-
-    If parameters with values (not None) exist in both `args` and `config_path`
-    then the value within `args` is kept.
-
-    Parameters
-    ----------
-    args : dict[str: Any]
-        arguments passed by the user via the command line
-    config_path : str
-        path to config json file meant to fill in parameters not given in
-        by the command line interface.
-
-    Returns
-    -------
-    dict[str]
-        dictionary `args` with missing or None values replaced with values
-        found within `config_path` json. If values are None within `args` and
-        not found within `config_path` json, they remain None.
-    """
-    config = json.load(open(config_path, "r"))
-    # use args unless args[key] is None or key not in args
-    combined = _combine_dicts(args, config)
-    return combined
-
-
-def _combine_dicts(args: dict[str], config: dict[str]):
-    """a simple helper function for combine_args meant to expose underlying
-    logic to the testing suite
-    """
-    return {
-        key: (
-            args[key]
-            if key in args and args[key] is not None
-            else config.get(key)
-        )
-        for key in set(config) | set(args)
-    }
-
-
-def validate_args(
-    args: dict[str], required_args: list[str] = ["experiment_name", "job_id"]
-):
-    """Looks through `args` and checks to ensure that each key in `required_args` both
-    exists and args[key] is not None
-
-    Parameters
-    ----------
-    args : dict[str]
-        arguments with str keys and Any type values. None types are allowed
-        unless the key is found in `required_args`
-    required_args : list[str], optional
-        required keys that need to be within `args` and be values other than None,
-        by default ["experiment_name", "job_id"]
-
-    Raises
-    ------
-    ArgumentError
-        Raises if any `key in required_args` is not found in `args.keys()`
-        or `args[key] is None`
-    """
-    missing_arg_names = [
-        required_arg
-        for required_arg in required_args
-        if required_arg not in args.keys() or args[required_arg] is None
-    ]
-    # if missing some required args, error
-    if len(missing_arg_names) > 0:
-        raise ArgumentError(
-            None,
-            "%s not specified in CLI or --config json and %s required"
-            % (
-                ", ".join(missing_arg_names),
-                "is" if len(missing_arg_names) == 1 else "are",
-            ),
         )
