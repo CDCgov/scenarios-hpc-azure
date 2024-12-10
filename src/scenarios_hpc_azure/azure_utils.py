@@ -235,7 +235,11 @@ class AzureExperimentLauncher:
             location_in_blob=self.experiment_path_blob,
         )
 
-    def launch_states(self, depend_on_task_ids: list[str] = None) -> list[str]:
+    def launch_states(
+        self,
+        depend_on_task_ids: list[str] = None,
+        run_dependent_tasks_on_fail: bool = False,
+    ) -> list[str]:
         """Launches an Azure Batch job under `self.job_id`,
         populating it with tasks for each subdirectory within your experiment's `states` directory
         passing each state name to `run_task.py` with the -s flag and the job_id with the -j flag.
@@ -244,6 +248,10 @@ class AzureExperimentLauncher:
         ----------
         depend_on_task_ids: list[str], optional
             list of task ids on which each state depends on finishing to start themselves, defaults to None
+
+        run_dependent_tasks_on_fail: bool, optional
+            whether or not to run postprocessing tasks regardless of the status of states
+
         Returns
         -------
         list[str]
@@ -272,6 +280,7 @@ class AzureExperimentLauncher:
                     % (self.runner_path_docker, statedir, self.job_id),
                     depends_on=depend_on_task_ids,
                     name_suffix=statedir,
+                    run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
                 )
                 # append this list onto our running list of tasks
                 task_ids += task_id
@@ -281,6 +290,7 @@ class AzureExperimentLauncher:
         self,
         task_arguments_df: pd.DataFrame,
         depend_on_task_ids: list[str] = None,
+        run_dependent_tasks_on_fail: bool = False,
     ):
         """Similar to `launch_states()` this method launches
         your states based on command line arguments provided by
@@ -296,6 +306,8 @@ class AzureExperimentLauncher:
             flag values.
         depend_on_task_ids: list[str], optional
             list of task ids on which each task depends on finishing to start themselves, defaults to None
+        run_dependent_tasks_on_fail: bool, optional
+            whether or not to run postprocessing tasks regardless of the status of states
 
         Returns
         -------
@@ -343,6 +355,7 @@ class AzureExperimentLauncher:
                 % (self.runner_path_docker, run_task_arguments),
                 depends_on=depend_on_task_ids,
                 name_suffix=state_suffix,
+                run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
             )
             # append this list onto our running list of tasks
             task_ids += task_id

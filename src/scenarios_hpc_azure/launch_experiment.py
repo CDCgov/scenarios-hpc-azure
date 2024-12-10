@@ -86,7 +86,8 @@ parser.add_argument(
     required=False,
     default=8,
     metavar="",
-    help="CPU count of machines running each task, supports 2, 4, or 8 cores",
+    help="CPU count of machines running each task, supports 2, 4, or 8 cores"
+    "defaults to 8 core machine",
 )
 
 parser.add_argument(
@@ -96,7 +97,8 @@ parser.add_argument(
     required=False,
     default=600,
     metavar="",
-    help="timeout time in minutes to monitor job, does NOT terminate job after timeout is reached",
+    help="timeout time in minutes to monitor job, "
+    "does NOT terminate job after timeout is reached, defaults to 600 minutes",
 )
 
 parser.add_argument(
@@ -116,6 +118,13 @@ parser.add_argument(
     "names and values to be passed to this script",
 )
 
+parser.add_argument(
+    "--run_dependent_tasks_on_fail",
+    default=False,
+    action="store_true",
+    help="whether or not to run postprocessing scripts if any tasks fail, default to False",
+)
+
 
 def launch():
     """The entry point into launching an experiment"""
@@ -125,7 +134,9 @@ def launch():
     cpu_count: int = args.cpu
     timeout_mins: int = args.timeout
     explicit_csv_path: str = args.explicit
-
+    run_dep = args.run_dependent_tasks_on_fail
+    print(type(run_dep), run_dep)
+    exit()
     docker_image_tag = "scenarios_image_%s" % job_id
     print(
         (
@@ -173,17 +184,20 @@ def launch():
         if os.path.exists(explicit_csv_path):
             task_arguments_df = pd.read_csv(explicit_csv_path)
             state_task_ids = launcher.launch_states_explicitly(
-                task_arguments_df
+                task_arguments_df, run_dependent_tasks_on_fail=run_dep
             )
         else:
             raise FileNotFoundError(
                 "Unable to locate explicit csv at %s" % explicit_csv_path
             )
     else:  # launch default behavior
-        state_task_ids = launcher.launch_states()
+        state_task_ids = launcher.launch_states(
+            run_dependent_tasks_on_fail=run_dep
+        )
     postprocessing_tasks = launcher.launch_postprocess(
         execution_order=postprocess_execution_order,
         depend_on_task_ids=state_task_ids,
+        run_dependent_tasks_on_fail=run_dep,
     )
     all_tasks_run += state_task_ids + postprocessing_tasks
     launcher.azure_client.monitor_job(job_id, timeout=timeout_mins)
