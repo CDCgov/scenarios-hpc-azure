@@ -539,15 +539,18 @@ class AzureExperimentLauncher:
             # cant call download_directory and pass individual file paths
             # so we must download each file 1 by 1. This is what cfa_azure
             # does in the backend anyways
+            written_dirs = []
             for blob in target_blob_paths:
                 if "." in blob:
+                    dest = os.path.join(
+                        dest,
+                        blob,
+                    )
+                    written_dirs.append(dest)
                     download_file(
                         self.azure_client.out_cont_client,
                         blob,
-                        os.path.join(
-                            dest,
-                            blob,
-                        ),
+                        dest,
                         False,
                         False,
                     )
