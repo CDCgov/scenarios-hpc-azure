@@ -5,6 +5,7 @@ import cfa_azure.helpers
 import pandas as pd
 from azure.core.paging import ItemPaged
 from cfa_azure.clients import AzureClient
+from cfa_azure.helpers import download_file
 
 from .utils import bcolors
 
@@ -481,27 +482,27 @@ class AzureExperimentLauncher:
         self,
         timeout_mins: int,
         dest: str,
-        blob_paths: Optional[list[str]] = None,
+        targets: Optional[list[str]] = None,
     ) -> list[str]:
         """Monitors a currently launched job, downloads job's outputs
         upon completion to `dest/` directory on callers machine. Overwrites
-        name collisions if requested
+        name collisions if same jobid is run twice.
+        Can take `targets` strs which, if found in the path of jobs output files,
+        includes it in downloads. `targets` can be filenames or directories.
 
         Parameters
         ----------
         timeout_mins : int
             how long to monitor the job before raising an error, does NOT
             halt execution on Azure Batch if this limit is reached, simply
-            stops monitoring and does not download
+            stops monitoring and attempts to download what is available.
         dest : str
-            source destination for downloaded files on users machine
-        blob_paths : list[str], optional
-            list of files from the blob you wish you retrieve,
+            source destination for downloaded files on users machine.
+            `experiment_name/jobid` directories appended to avoid collisions.
+        targets : list[str], optional
+            list of files/directories from the blob you wish you retrieve,
             None retrieves the entire experiment/jobid/ directory,
             containing all output files. by default None
-        override_existing : bool, optional
-            whether or not to overwrite existing files with same path in `dest`
-            , by default False
 
         Returns
         -------
@@ -512,26 +513,52 @@ class AzureExperimentLauncher:
         -------
         RuntimeError if `timeout_mins` is reached before job completes
         """
-        output_dir = (
-            os.path.join(self._experiment_name, self.job_id)
-            if blob_paths is None
-            else blob_paths
-        )
         # monitor the job, execution passed back when job completes, or after timeout_mins minutes
         self.azure_client.monitor_job(self.job_id, timeout=timeout_mins)
-        # job complete before `timeout_mins`, download output_dir -> dest
+        # execution has returned, lets try to download the requested files now
+        output_dir = os.path.join(self._experiment_name, self.job_id)
         print(
             (
                 f"{bcolors.WARNING} downloading files from blob {output_dir} "
-                f"to {dest} overwriting any existing files. {bcolors.ENDC}"
+                f"to {dest} overwriting any existing files with the same filenames. {bcolors.ENDC}"
             )
         )
-        written_dirs = download_directory_from_azure(
-            self.azure_client,
-            azure_dirs=output_dir,
-            dest=dest,
-            overwrite=True,
-        )
+        if targets is not None:
+            # get all the output files from the job that just finished
+            all_job_outputs = (
+                self.azure_client.out_cont_client.list_blob_names(
+                    name_starts_with=output_dir
+                )
+            )
+            # then scan to see if `target` is inside each blob path
+            target_blob_paths = [
+                blob_path
+                for blob_path in all_job_outputs
+                if any(target in blob_path for target in targets)
+            ]
+            # cant call download_directory and pass individual file paths
+            # so we must download each file 1 by 1. This is what cfa_azure
+            # does in the backend anyways
+            for blob in target_blob_paths:
+                if "." in blob:
+                    download_file(
+                        self.azure_client.out_cont_client,
+                        blob,
+                        os.path.join(
+                            dest,
+                            blob,
+                        ),
+                        False,
+                        False,
+                    )
+        else:
+            # by default download entire dir
+            written_dirs = download_directory_from_azure(
+                self.azure_client,
+                azure_dirs=output_dir,
+                dest=dest,
+                overwrite=True,
+            )
         return written_dirs
 
 
