@@ -1,5 +1,7 @@
 import argparse
+import json
 import os
+import sys
 from itertools import groupby
 
 import pandas as pd
@@ -21,7 +23,40 @@ passed as the flag names with a `--` prepended,
 so the column names are important. It is possible to skip over states
 in --explicit mode, so programatic generation of the csv is encouraged"""
 
-parser = argparse.ArgumentParser(
+
+class ArgumentParserConfig(argparse.ArgumentParser):
+    """A custom override of the argparser functionality to insert
+    parameters from a `--config` json before validation of required/default
+    parameters occurs.
+    """
+
+    def parse_args(self, args=None, namespace=None):
+        if args is None:
+            args = sys.argv[1:]
+            # if user specifies a --config path, read that in
+            # and fill in any arguments from there before validating
+            if "--config" in args:
+                config_path = args[args.index("--config") + 1]
+                config: dict = json.load(open(config_path))
+                for key, val in config.items():
+                    # dont override any args passed by the user
+                    if key not in args:
+                        # argparse requires the --key formatting
+                        key = "--" + key if "--" not in key else key
+                        args.append(key)
+                        # some params pass lists to argv, mock that here
+                        # all argv params are str, argparse converts types for us
+                        val = val if isinstance(val, list) else [val]
+                        [args.append(str(v)) for v in val]
+
+        args, argv = self.parse_known_args(args, namespace)
+        if argv:
+            msg = "unrecognized arguments: %s"
+            self.error(msg % " ".join(argv))
+        return args
+
+
+parser = ArgumentParserConfig(
     prog="launch_experiment",
     description=description_str,
     epilog=epilog_str,
@@ -78,6 +113,15 @@ parser.add_argument(
     required=False,
     metavar="",
     help="path to optional explicit task arguments csv",
+)
+
+parser.add_argument(
+    "--config",
+    type=str,
+    required=False,
+    metavar="",
+    help="path to launch_experiment configuration json file, containing all flag "
+    "names and values to be passed to this script",
 )
 
 
