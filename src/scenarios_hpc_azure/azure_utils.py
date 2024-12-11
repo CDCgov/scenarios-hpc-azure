@@ -542,15 +542,15 @@ class AzureExperimentLauncher:
             written_dirs = []
             for blob in target_blob_paths:
                 if "." in blob:
-                    dest = os.path.join(
+                    file_dest_path = os.path.join(
                         dest,
                         blob,
                     )
-                    written_dirs.append(dest)
+                    written_dirs.append(file_dest_path)
                     download_file(
                         self.azure_client.out_cont_client,
                         blob,
-                        dest,
+                        file_dest_path,
                         False,
                         False,
                     )
