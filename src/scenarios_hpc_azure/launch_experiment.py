@@ -31,6 +31,23 @@ class ArgumentParserConfig(argparse.ArgumentParser):
     """
 
     def parse_args(self, args=None, namespace=None):
+        """
+        An overriden version of argparse.ArgumentParser's parse_args().
+
+        Why did we do this? As the number of optional parameters accepted by
+        launch_experiment increases it becomes increasingly annoying to type
+        out longer and longer launch commands. Thus the `--config` flag was born.
+
+        `--config` allows users to provide a path to a JSON file containing their
+        configuration, which are read in just like normal arguments are.
+        in the case that the same parameter is passed via `--config` and the
+        normal way through the runtime arguments the later takes priority.
+
+        boolean flags such as `--run_dependent_tasks_on_fail` are specified
+        with booleans in the JSON, but through simple existence checks with
+        runtime arguments. While inconsistent, this way users dont need to pass
+        `--run_dependent_tasks_on_fail true` to the parser.
+        """
         if args is None:
             args = sys.argv[1:]
             # if user specifies a --config path, read that in
@@ -41,13 +58,19 @@ class ArgumentParserConfig(argparse.ArgumentParser):
                 for key, val in config.items():
                     # dont override any args passed by the user
                     if key not in args:
-                        # argparse requires the --key formatting
-                        key = "--" + key if "--" not in key else key
-                        args.append(key)
-                        # some params pass lists to argv, mock that here
-                        # all argv params are str, argparse converts types for us
-                        val = val if isinstance(val, list) else [val]
-                        [args.append(str(v)) for v in val]
+                        # add key if val is true boolean, or not bool object at all
+                        if (isinstance(val, bool) and val) or not isinstance(
+                            val, bool
+                        ):
+                            # argparse requires the --key formatting
+                            key = "--" + key if "--" not in key else key
+                            args.append(key)
+                        # add values only if key is not a flag, flags take no values.
+                        if not isinstance(val, bool):
+                            # some params pass lists to argv, mock that here
+                            # all argv params are str, argparse converts types for us
+                            val = val if isinstance(val, list) else [val]
+                            [args.append(str(v)) for v in val]
 
         args, argv = self.parse_known_args(args, namespace)
         if argv:
