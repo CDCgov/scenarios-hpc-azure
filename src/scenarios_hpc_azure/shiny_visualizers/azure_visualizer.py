@@ -241,10 +241,12 @@ def server(input, output, session: Session):
         )
 
     @reactive.effect
-    @reactive.event(input.states)
+    @reactive.event(input.states, input.job_id)
     def update_scenarios_from_state_selection():
         # we are given experiment/job_id/states to be valid selections
         # because the above methods have already triggered
+        # scenarios are the same across states so we dont need to worry
+        # about the specific state chosen, just need one
         experiment = input.experiment()
         job_id = input.job_id()
         states = input.states()
