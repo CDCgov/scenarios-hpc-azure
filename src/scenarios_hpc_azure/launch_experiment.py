@@ -157,7 +157,7 @@ def launch():
     cpu_count: int = args.cpu
     timeout_mins: int = args.timeout
     explicit_csv_path: str = args.explicit
-    run_dep = args.run_dependent_tasks_on_fail
+    run_dep: bool = args.run_dependent_tasks_on_fail
     docker_image_tag = "scenarios_image_%s" % job_id
     print(
         (

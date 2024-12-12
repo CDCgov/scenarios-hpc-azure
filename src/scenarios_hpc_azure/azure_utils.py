@@ -421,6 +421,7 @@ class AzureExperimentLauncher:
         execution_order: list[str | list[str]],
         depend_on_task_ids: list[str],
         postprocess_folder_name: str = "postprocessing_scripts",
+        run_dependent_tasks_on_fail: bool = False,
     ) -> list[str]:
         """Launches postprocessing scripts identified by `execution_order`
         in the order they are passed in the list. List elements are
@@ -480,6 +481,7 @@ class AzureExperimentLauncher:
                     docker_cmd="python %s -j %s"
                     % (postprocess_docker_path, self.job_id),
                     depends_on=depend_on_task_ids + postprocess_task_ids,
+                    run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
                 )
                 execution_bundle_ids += task_id
             # bundle completed, add those task ids to the running list
