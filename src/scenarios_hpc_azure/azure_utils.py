@@ -540,6 +540,7 @@ class AzureExperimentLauncher:
         )
         if targets is not None:
             # get all the output files from the job that just finished
+            # list_blob_names returns directory AND file paths, will filter later
             all_job_outputs = (
                 self.azure_client.out_cont_client.list_blob_names(
                     name_starts_with=output_dir
@@ -556,6 +557,8 @@ class AzureExperimentLauncher:
             # does in the backend anyways
             written_dirs = []
             for blob in target_blob_paths:
+                # make sure given blob is a file, cant use os.isfile() since
+                # file does not exist in user's computer yet.
                 if "." in blob:
                     file_dest_path = os.path.join(
                         dest,
