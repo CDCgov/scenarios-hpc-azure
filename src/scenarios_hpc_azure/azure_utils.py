@@ -1,9 +1,13 @@
 import os
+from typing import Optional
 
 import cfa_azure.helpers
 import pandas as pd
 from azure.core.paging import ItemPaged
 from cfa_azure.clients import AzureClient
+from cfa_azure.helpers import download_file
+
+from .utils import bcolors
 
 
 class AzureExperimentLauncher:
@@ -235,7 +239,11 @@ class AzureExperimentLauncher:
             location_in_blob=self.experiment_path_blob,
         )
 
-    def launch_states(self, depend_on_task_ids: list[str] = None) -> list[str]:
+    def launch_states(
+        self,
+        depend_on_task_ids: list[str] = None,
+        run_dependent_tasks_on_fail: bool = False,
+    ) -> list[str]:
         """Launches an Azure Batch job under `self.job_id`,
         populating it with tasks for each subdirectory within your experiment's `states` directory
         passing each state name to `run_task.py` with the -s flag and the job_id with the -j flag.
@@ -244,6 +252,10 @@ class AzureExperimentLauncher:
         ----------
         depend_on_task_ids: list[str], optional
             list of task ids on which each state depends on finishing to start themselves, defaults to None
+
+        run_dependent_tasks_on_fail: bool, optional
+            whether or not to run postprocessing tasks regardless of the status of states
+
         Returns
         -------
         list[str]
@@ -272,6 +284,7 @@ class AzureExperimentLauncher:
                     % (self.runner_path_docker, statedir, self.job_id),
                     depends_on=depend_on_task_ids,
                     name_suffix=statedir,
+                    run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
                 )
                 # append this list onto our running list of tasks
                 task_ids += task_id
@@ -281,6 +294,7 @@ class AzureExperimentLauncher:
         self,
         task_arguments_df: pd.DataFrame,
         depend_on_task_ids: list[str] = None,
+        run_dependent_tasks_on_fail: bool = False,
     ):
         """Similar to `launch_states()` this method launches
         your states based on command line arguments provided by
@@ -296,6 +310,8 @@ class AzureExperimentLauncher:
             flag values.
         depend_on_task_ids: list[str], optional
             list of task ids on which each task depends on finishing to start themselves, defaults to None
+        run_dependent_tasks_on_fail: bool, optional
+            whether or not to run postprocessing tasks regardless of the status of states
 
         Returns
         -------
@@ -343,6 +359,7 @@ class AzureExperimentLauncher:
                 % (self.runner_path_docker, run_task_arguments),
                 depends_on=depend_on_task_ids,
                 name_suffix=state_suffix,
+                run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
             )
             # append this list onto our running list of tasks
             task_ids += task_id
@@ -408,6 +425,7 @@ class AzureExperimentLauncher:
         execution_order: list[str | list[str]],
         depend_on_task_ids: list[str],
         postprocess_folder_name: str = "postprocessing_scripts",
+        run_dependent_tasks_on_fail: bool = False,
     ) -> list[str]:
         """Launches postprocessing scripts identified by `execution_order`
         in the order they are passed in the list. List elements are
@@ -467,12 +485,102 @@ class AzureExperimentLauncher:
                     docker_cmd="python %s -j %s"
                     % (postprocess_docker_path, self.job_id),
                     depends_on=depend_on_task_ids + postprocess_task_ids,
+                    run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
                 )
                 execution_bundle_ids += task_id
             # bundle completed, add those task ids to the running list
             postprocess_task_ids += execution_bundle_ids
 
         return postprocess_task_ids
+
+    def monitor_and_download(
+        self,
+        timeout_mins: int,
+        dest: str,
+        targets: Optional[list[str]] = None,
+    ) -> list[str]:
+        """Monitors a currently launched job, downloads job's outputs
+        upon completion to `dest/` directory on callers machine. Overwrites
+        name collisions if same jobid is run twice.
+        Can take `targets` strs which, if found in the path of jobs output files,
+        includes it in downloads. `targets` can be filenames or directories.
+
+        Parameters
+        ----------
+        timeout_mins : int
+            how long to monitor the job before raising an error, does NOT
+            halt execution on Azure Batch if this limit is reached, simply
+            stops monitoring and attempts to download what is available.
+        dest : str
+            source destination for downloaded files on users machine.
+            `experiment_name/jobid` directories appended to avoid collisions.
+        targets : list[str], optional
+            list of files/directories from the blob you wish you retrieve,
+            None retrieves the entire experiment/jobid/ directory,
+            containing all output files. by default None
+
+        Returns
+        -------
+        list[str]
+            paths to downloaded files in `dest`
+
+        Raises
+        -------
+        RuntimeError if `timeout_mins` is reached before job completes
+        """
+        # monitor the job, execution passed back when job completes, or after timeout_mins minutes
+        self.azure_client.monitor_job(self.job_id, timeout=timeout_mins)
+        # execution has returned, lets try to download the requested files now
+        output_dir = os.path.join(self._experiment_name, self.job_id)
+        print(
+            (
+                f"{bcolors.WARNING} downloading files from blob {output_dir} "
+                f"to {dest} overwriting any existing files with the same filenames. {bcolors.ENDC}"
+            )
+        )
+        if targets is not None:
+            # get all the output files from the job that just finished
+            # list_blob_names returns directory AND file paths, will filter later
+            all_job_outputs = (
+                self.azure_client.out_cont_client.list_blob_names(
+                    name_starts_with=output_dir
+                )
+            )
+            # then scan to see if `target` is inside each blob path
+            target_blob_paths = [
+                blob_path
+                for blob_path in all_job_outputs
+                if any(target in blob_path for target in targets)
+            ]
+            # cant call download_directory and pass individual file paths
+            # so we must download each file 1 by 1. This is what cfa_azure
+            # does in the backend anyways
+            written_dirs = []
+            for blob in target_blob_paths:
+                # make sure given blob is a file, cant use os.isfile() since
+                # file does not exist in user's computer yet.
+                if "." in blob:
+                    file_dest_path = os.path.join(
+                        dest,
+                        blob,
+                    )
+                    written_dirs.append(file_dest_path)
+                    download_file(
+                        self.azure_client.out_cont_client,
+                        blob,
+                        file_dest_path,
+                        False,
+                        False,
+                    )
+        else:
+            # by default download entire dir
+            written_dirs = download_directory_from_azure(
+                self.azure_client,
+                azure_dirs=output_dir,
+                dest=dest,
+                overwrite=True,
+            )
+        return written_dirs
 
 
 def build_azure_connection(

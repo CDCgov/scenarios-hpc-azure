@@ -244,7 +244,7 @@ def drop_keys_with_substring(dct: dict[str], drop_s: str):
 def prepare_posterior_data(
     posteriors: dict[str, list],
     flatten_chains=False,
-    drop_final_timesteps=True,
+    drop_timesteps=True,
 ):
     """A helper function used to prepare posterior sample data for visualization
     will scan for parameters generated via `numpyro.plate` and separate
@@ -252,7 +252,7 @@ def prepare_posterior_data(
 
     Also is able to optionally flatten chains / samples into a 1d numpy array
 
-    Can drop the `final_timesteps_s/e/i/c` posteriors before performing these
+    Can drop the `timestep_s/e/i/c` posteriors before performing these
     operations in case they were included (this is mostly a problem for
     old experiments before separation of these files occurred.)
 
@@ -264,8 +264,8 @@ def prepare_posterior_data(
     flatten_chains : bool, optional
         whether or not to convert to numpy array and flatten
         chains/samples together into a 1d array, by default False
-    drop_final_timesteps : bool, optional
-        whether to drop any `final_timesteps_` parameters before
+    drop_timesteps : bool, optional
+        whether to drop any `timesteps_` parameters before
         performing operations, by default True
 
     Returns
@@ -273,9 +273,9 @@ def prepare_posterior_data(
     dict[str: list|np.ndarray]
         posteriors with operations applied
     """
-    if drop_final_timesteps:
-        # drop any final_timestep variables if they exist within the posteriors
-        posteriors = drop_keys_with_substring(posteriors, "final_timestep")
+    if drop_timesteps:
+        # drop any timestep variables if they exist within the posteriors
+        posteriors = drop_keys_with_substring(posteriors, "timestep")
     posteriors: dict[str, list] = flatten_list_parameters(posteriors)
     if flatten_chains:
         posteriors = {
@@ -385,7 +385,7 @@ def load_checkpoint_inference_chains(
     posteriors = json.load(open(checkpoint_path, "r"))
     # any sampled parameters created via numpyro.plate will mess up the data
     # flatten plated parameters into separate keys
-    posteriors = prepare_posterior_data(posteriors, drop_final_timesteps=True)
+    posteriors = prepare_posterior_data(posteriors, drop_timesteps=True)
     num_sampled_parameters = len(posteriors.keys())
     # we want a mostly square subplot, so lets sqrt and take floor/ceil to deal with odd numbers
     num_rows = math.isqrt(num_sampled_parameters)
@@ -464,7 +464,7 @@ def load_prior_distributions_plot(cache_path, matplotlib_theme):
             # overlay the posteriors onto the priors if they exist
             posteriors = json.load(open(posteriors_path))
             posteriors = prepare_posterior_data(
-                posteriors, flatten_chains=True, drop_final_timesteps=True
+                posteriors, flatten_chains=True, drop_timesteps=True
             )
             # going to need the axis objects back to modify them
             axs = fig.get_axes()
@@ -533,7 +533,7 @@ def load_checkpoint_inference_correlations(
     posteriors = json.load(open(checkpoint_path, "r"))
     # flatten all the data into 1d and drop the final timesteps posteriors
     posteriors = prepare_posterior_data(
-        posteriors, flatten_chains=True, drop_final_timesteps=True
+        posteriors, flatten_chains=True, drop_timesteps=True
     )
     # Compute the correlation matrix, reverse it so diagonal starts @ top left
     correlation_matrix = pd.DataFrame(posteriors).corr()[::-1]
@@ -593,7 +593,7 @@ def load_checkpoint_inference_violin_plots(
         # flatten any usage of numpyro.plate into separate parameters,
         # otherwise youll get nonsense in the next step
         posteriors = prepare_posterior_data(
-            posteriors, flatten_chains=True, drop_final_timesteps=True
+            posteriors, flatten_chains=True, drop_timesteps=True
         )
     if os.path.exists(priors_path):
         priors = json.load(
@@ -640,7 +640,7 @@ def load_checkpoint_inference_correlation_pairs(
         )
     posteriors = json.load(open(checkpoint_path, "r"))
     posteriors = prepare_posterior_data(
-        posteriors, flatten_chains=False, drop_final_timesteps=True
+        posteriors, flatten_chains=False, drop_timesteps=True
     )
     # convert lists to np.arrays
     posteriors = {

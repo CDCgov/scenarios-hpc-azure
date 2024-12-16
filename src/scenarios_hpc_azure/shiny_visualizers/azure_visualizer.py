@@ -29,7 +29,7 @@ SHINY_DOWNLOADS_PATH = (
 # this will reduce the time it takes to load the azure connection, but only shows
 # one experiment worth of data, which may be what you want...
 #  leave empty ("") to explore all experiments
-PRE_FILTER_EXPERIMENTS = "fit_season2_4strain_2202_2404"
+PRE_FILTER_EXPERIMENTS = "projection_outlook_24_11"
 # when loading the overview timelines csv for each run, columns
 # are expected to have names corresponding to the type of plot they create
 # vaccination_0_17 specifies the vaccination_ plot type, multiple columns may share
@@ -241,10 +241,12 @@ def server(input, output, session: Session):
         )
 
     @reactive.effect
-    @reactive.event(input.states)
+    @reactive.event(input.states, input.job_id)
     def update_scenarios_from_state_selection():
         # we are given experiment/job_id/states to be valid selections
         # because the above methods have already triggered
+        # scenarios are the same across states so we dont need to worry
+        # about the specific state chosen, just need one
         experiment = input.experiment()
         job_id = input.job_id()
         states = input.states()
