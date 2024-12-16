@@ -245,7 +245,6 @@ def launch():
     )
     # after all states and postprocessing launched, we add a final flag
     # which tells the job to mark itself as completed when all tasks finish
-    launcher.azure_client.mark_job_completed_after_tasks_run(job_id)
     all_tasks_run += state_task_ids + postprocessing_tasks
     if dest_path is not None:
         if os.path.exists(dest_path):

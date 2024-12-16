@@ -263,7 +263,9 @@ class AzureExperimentLauncher:
         """
         # command to run the job, if we have already launched states previously, dont recreate the job
         if not self.job_launched:
-            self.azure_client.add_job(job_id=self.job_id)
+            self.azure_client.add_job(
+                job_id=self.job_id, mark_complete_after_tasks_run=True
+            )
             self.job_launched = True
         # upload the experiment folder so that the runner_path_docker & states_path_docker point to the correct places
         # here we pass `location=self.experiment_path_blob` because we are not uploading from the docker container
@@ -321,7 +323,9 @@ class AzureExperimentLauncher:
         command_line_arguments = tuple(task_arguments_df.columns)
         # command to run the job, if we have already launched states previously, dont recreate the job
         if not self.job_launched:
-            self.azure_client.add_job(job_id=self.job_id)
+            self.azure_client.add_job(
+                job_id=self.job_id, mark_complete_after_tasks_run=True
+            )
             self.job_launched = True
         # upload the experiment folder so that the runner_path_docker & states_path_docker point to the correct places
         # here we pass `location=self.experiment_path_blob` because we are not uploading from the docker container
