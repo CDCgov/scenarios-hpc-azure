@@ -243,8 +243,6 @@ def launch():
         depend_on_task_ids=state_task_ids,
         run_dependent_tasks_on_fail=run_dep,
     )
-    # after all states and postprocessing launched, we add a final flag
-    # which tells the job to mark itself as completed when all tasks finish
     all_tasks_run += state_task_ids + postprocessing_tasks
     if dest_path is not None:
         if os.path.exists(dest_path):
