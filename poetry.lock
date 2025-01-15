@@ -1048,7 +1048,7 @@ seaborn = ">=0.13.2"
 type = "git"
 url = "https://github.com/CDCgov/DynODE.git"
 reference = "main"
-resolved_reference = "c665be2e4f686ab34fbb8d60ad214688aabccd46"
+resolved_reference = "3525a4ad4d79f4e80859640bb274870bf10636d5"
 
 [[package]]
 name = "epiweeks"
