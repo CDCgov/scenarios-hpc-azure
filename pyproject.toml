@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "scenarios_hpc_azure"
-version = "0.1.0"
+version = "0.1.1"
 description = "CFA Azure Acceleration library for creating, launching, and visualizing Azure experiments"
 authors = ["Your Name <you@example.com>"]
 license = "Apache License, Version 2.0, January 2004"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="3786cc8023c5412bd275b042d1fb23892aa2b6dd"}
+cfa-azure = {git = "https://github.com/CDCgov/cfa_azure.git", rev="43f4effd2d2fc46acc0f33ae047d12dfd9481bbd"}
 pandas = "^2.2.3"
 shiny = "^1.1.0"
 shinywidgets = "^0.3.3"
