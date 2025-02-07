@@ -366,7 +366,7 @@ class AzureExperimentLauncher:
                 run_dependent_tasks_on_fail=run_dependent_tasks_on_fail,
             )
             # append this list onto our running list of tasks
-            task_ids += task_id
+            task_ids.append(task_id)
         return task_ids
 
     def _find_postprocess_file_docker(
