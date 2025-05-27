@@ -8,8 +8,8 @@
 ## Overview
 
 > [!IMPORTANT]
-> This repository is under active development.
-> Please look around, but we advise against working with this code until it has stabilized.
+> This repository is now deprecated.
+> Please look around, but we advise against building anything on top of this code.
 
 This repository is responsible for creating, visualizing, launching, and standardizing DynODE experiments.
 An __experiment__ is the broadest categorization of an effort or goal, e.g. Fitting a particular time period in a specific way is an experiment.
